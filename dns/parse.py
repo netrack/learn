@@ -17,9 +17,10 @@ def shannon(b):
         for prob in freqs))
 
 
-def writeto(writer):
+def writeto(writer, label):
     csvwriter = csv.writer(writer)
     csvwriter.writerow([
+        "label",
         "qdcount",
         "ancount",
         "arcount",
@@ -42,7 +43,7 @@ def writeto(writer):
 
     def _prn(pkt):
         row = dnsonly(pkt)
-        csvwriter.writerow(map(float, row))
+        csvwriter.writerow([label]+list(map(float, row)))
 
     return _prn
 
@@ -116,6 +117,8 @@ def main():
                         help="Traffic dump.")
     parser.add_argument("out", metavar="OUT", type=str,
                         help="Output attributes.")
+    parser.add_argument("label", metavar="label", type=int,
+                        help="The class label.")
 
     args = parser.parse_args()
 
@@ -125,7 +128,7 @@ def main():
             offline=args.pcap,
             store=False,
             lfilter=lambda p: p.haslayer(scapy.layers.dns.DNS),
-            prn=writeto(csvfile))
+            prn=writeto(csvfile, args.label))
 
 
 if __name__ == "__main__":
