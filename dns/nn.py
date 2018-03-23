@@ -6,61 +6,47 @@ import numpy
 
 
 def first(tuples):
+    """Return a numpy array with the first elements of each tuple."""
     return numpy.array([t[0] for t in tuples])
 
 
 def last(tuples):
+    """Retur a numpy array with the last elements of each tuple."""
     return numpy.array([t[1:] for t in tuples])
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Neural network model.")
-    parser.add_argument("total", metavar="TOTAL", type=int,
-                        help="Count of items to train.")
-    parser.add_argument("batch", metavar="BATCH", type=int,
-                        help="Size of a batch.")
-    parser.add_argument("negative", metavar="FILE",
-                        help="File without DNS-tunneling traffic.")
-    parser.add_argument("positive", metavar="FILE",
-                        help="File with DNS-tunneling traffic.")
-
-    args = parser.parse_args()
-
+def train_and_estimate(dim, num_classes, units, total, batch_size, filenames):
     import keras
 
     model = keras.models.Sequential()
-    model.add(keras.layers.Dense(units=9, activation="relu", input_dim=18))
-    # model.add(keras.layers.Dropout(0.7))
-    model.add(keras.layers.Dense(units=4, activation="relu"))
-    model.add(keras.layers.Dense(units=2, activation="softmax"))
+    model.add(keras.layers.Dense(units[0], activation="relu", input_dim=dim))
+    model.add(keras.layers.Dropout(units[1]))
+    model.add(keras.layers.Dense(units[2], activation="relu"))
+    model.add(keras.layers.Dropout(units[3]))
+    model.add(keras.layers.Dense(num_classes, activation="softmax"))
 
     model.compile(loss="categorical_crossentropy",
                   optimizer="sgd",
                   metrics=["accuracy"])
 
     with contextlib.ExitStack() as stack:
-        neg_file = open(args.negative)
-        pos_file = open(args.positive)
-
-        stack.enter_context(neg_file)
-        stack.enter_context(pos_file)
-
-        positive_file = csv.reader(neg_file)
-        negative_file = csv.reader(pos_file)
+        new = lambda name: stack.enter_context(open(name))
+        files = [csv.reader(new(name)) for name in filenames]
 
         # Read headers of the CSV files.
-        print(len(next(positive_file)))
-        print(len(next(negative_file)))
+        for f in files:
+            print(len(next(f)))
 
-        for _ in range(args.total):
+        # Read specified number of times a batch to train network.
+        for _ in range(total):
             batch = []
 
-            for _ in range(args.batch):
-                batch.append(numpy.array(next(positive_file)))
-                batch.append(numpy.array(next(negative_file)))
+            for _ in range(batch_size):
+                for f in files:
+                    batch.append(numpy.array(next(f)))
 
             # Shuffle the training sets and then train a model.
-            random.shuffle(batch)
+            # random.shuffle(batch)
             x_batch = last(batch)
             y_batch = keras.utils.to_categorical(first(batch))
 
@@ -68,18 +54,37 @@ def main():
 
         # Evaluate model accuracy.
         batch = []
-        for _ in range(args.batch):
-            batch.append(numpy.array(next(positive_file)))
-            batch.append(numpy.array(next(negative_file)))
+        for _ in range(batch_size):
+            for f in files:
+                batch.append(numpy.array(next(f)))
 
         # Shuffle the training sets and then train a model.
-        random.shuffle(batch)
+        # random.shuffle(batch)
         x_batch = last(batch)
         y_batch = keras.utils.to_categorical(first(batch))
 
         loss_and_metrics = model.evaluate(x_batch, y_batch)
-        print(loss_and_metrics)
+        accuracy = loss_and_metrics[1]
+    return accuracy
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Neural network model.")
+    # parser.add_argument("iterations", metavar="ITERATIONS", type=int,
+                        # help="Number of iterations.")
+    parser.add_argument("total", metavar="TOTAL", type=int,
+                        help="Count of items to train.")
+    parser.add_argument("batch", metavar="BATCH", type=int,
+                        help="Size of a batch.")
+    parser.add_argument("files", metavar="FILE", nargs="+",
+                        help="File with DNS traffic attributes.")
+
+    args = parser.parse_args()
+
+    units = [24, 0.1, 8, 0.1]
+
+    return train_and_estimate(18, 3, units, args.total, args.batch, args.files)
 
 
 if __name__ == "__main__":
-    main()
+    print(main())
