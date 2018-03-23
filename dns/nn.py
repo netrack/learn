@@ -29,9 +29,9 @@ def main():
     import keras
 
     model = keras.models.Sequential()
-    model.add(keras.layers.Dense(units=14, activation="relu", input_dim=18))
+    model.add(keras.layers.Dense(units=9, activation="relu", input_dim=18))
     # model.add(keras.layers.Dropout(0.7))
-    model.add(keras.layers.Dense(units=7, activation="relu"))
+    model.add(keras.layers.Dense(units=4, activation="relu"))
     model.add(keras.layers.Dense(units=2, activation="softmax"))
 
     model.compile(loss="categorical_crossentropy",
