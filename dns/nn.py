@@ -2,6 +2,7 @@ import argparse
 import csv
 import contextlib
 import random
+import scipy.optimize
 import numpy
 
 
@@ -18,10 +19,13 @@ def last(tuples):
 def train_and_estimate(dim, num_classes, units, total, batch_size, filenames):
     import keras
 
+    layer1 = int(units[0])
+    layer2 = int(units[2])
+
     model = keras.models.Sequential()
-    model.add(keras.layers.Dense(units[0], activation="relu", input_dim=dim))
+    model.add(keras.layers.Dense(layer1, activation="relu", input_dim=dim))
     model.add(keras.layers.Dropout(units[1]))
-    model.add(keras.layers.Dense(units[2], activation="relu"))
+    model.add(keras.layers.Dense(layer2, activation="relu"))
     model.add(keras.layers.Dropout(units[3]))
     model.add(keras.layers.Dense(num_classes, activation="softmax"))
 
@@ -35,7 +39,7 @@ def train_and_estimate(dim, num_classes, units, total, batch_size, filenames):
 
         # Read headers of the CSV files.
         for f in files:
-            print(len(next(f)))
+            next(f)
 
         # Read specified number of times a batch to train network.
         for _ in range(total):
@@ -46,7 +50,7 @@ def train_and_estimate(dim, num_classes, units, total, batch_size, filenames):
                     batch.append(numpy.array(next(f)))
 
             # Shuffle the training sets and then train a model.
-            # random.shuffle(batch)
+            random.shuffle(batch)
             x_batch = last(batch)
             y_batch = keras.utils.to_categorical(first(batch))
 
@@ -59,12 +63,13 @@ def train_and_estimate(dim, num_classes, units, total, batch_size, filenames):
                 batch.append(numpy.array(next(f)))
 
         # Shuffle the training sets and then train a model.
-        # random.shuffle(batch)
+        random.shuffle(batch)
         x_batch = last(batch)
         y_batch = keras.utils.to_categorical(first(batch))
 
         loss_and_metrics = model.evaluate(x_batch, y_batch)
         accuracy = loss_and_metrics[1]
+
     return accuracy
 
 
@@ -80,10 +85,14 @@ def main():
                         help="File with DNS traffic attributes.")
 
     args = parser.parse_args()
+    x0 = [40, 0.1, 15, 0.1]
 
-    units = [24, 0.1, 8, 0.1]
+    def f(x):
+        return -train_and_estimate(18, 3, x, args.total, args.batch, args.files)
 
-    return train_and_estimate(18, 3, units, args.total, args.batch, args.files)
+    xopt = scipy.optimize.fmin(f, x0, maxfun=20, xtol=0.2)
+    print(xopt)
+    return train_and_estimate(18, 3, xopt, args.total, args.batch, args.files)
 
 
 if __name__ == "__main__":
