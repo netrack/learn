@@ -2,7 +2,6 @@ import argparse
 import csv
 import contextlib
 import random
-import scipy.optimize
 import numpy
 
 
@@ -21,16 +20,18 @@ def train_and_estimate(dim, num_classes, units, total, batch_size, filenames):
 
     layer1 = int(units[0])
     layer2 = int(units[2])
+    layer3 = int(units[3])
 
     model = keras.models.Sequential()
     model.add(keras.layers.Dense(layer1, activation="relu", input_dim=dim))
     model.add(keras.layers.Dropout(units[1]))
     model.add(keras.layers.Dense(layer2, activation="relu"))
-    model.add(keras.layers.Dropout(units[3]))
+    model.add(keras.layers.Dense(layer3, activation="relu"))
+    model.add(keras.layers.Dropout(units[4]))
     model.add(keras.layers.Dense(num_classes, activation="softmax"))
 
     model.compile(loss="categorical_crossentropy",
-                  optimizer="sgd",
+                  optimizer="nadam",
                   metrics=["accuracy"])
 
     with contextlib.ExitStack() as stack:
@@ -85,14 +86,9 @@ def main():
                         help="File with DNS traffic attributes.")
 
     args = parser.parse_args()
-    x0 = [40, 0.1, 15, 0.1]
+    x0 = [12, 0.1, 12, 12, 0.1]
 
-    def f(x):
-        return -train_and_estimate(18, 3, x, args.total, args.batch, args.files)
-
-    xopt = scipy.optimize.fmin(f, x0, maxfun=20, xtol=0.2)
-    print(xopt)
-    return train_and_estimate(18, 3, xopt, args.total, args.batch, args.files)
+    return train_and_estimate(18, 3, x0, args.total, args.batch, args.files)
 
 
 if __name__ == "__main__":
