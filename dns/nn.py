@@ -53,7 +53,7 @@ def train_and_estimate(dim, num_classes, units, total, batch_size, filenames):
             # Shuffle the training sets and then train a model.
             random.shuffle(batch)
             x_batch = last(batch)
-            y_batch = keras.utils.to_categorical(first(batch))
+            y_batch = keras.utils.to_categorical(first(batch), num_classes)
 
             model.train_on_batch(x_batch, y_batch)
 
@@ -66,7 +66,7 @@ def train_and_estimate(dim, num_classes, units, total, batch_size, filenames):
         # Shuffle the training sets and then train a model.
         random.shuffle(batch)
         x_batch = last(batch)
-        y_batch = keras.utils.to_categorical(first(batch))
+        y_batch = keras.utils.to_categorical(first(batch), num_classes)
 
         loss_and_metrics = model.evaluate(x_batch, y_batch)
         accuracy = loss_and_metrics[1]
@@ -76,8 +76,6 @@ def train_and_estimate(dim, num_classes, units, total, batch_size, filenames):
 
 def main():
     parser = argparse.ArgumentParser(description="Neural network model.")
-    # parser.add_argument("iterations", metavar="ITERATIONS", type=int,
-                        # help="Number of iterations.")
     parser.add_argument("total", metavar="TOTAL", type=int,
                         help="Count of items to train.")
     parser.add_argument("batch", metavar="BATCH", type=int,
@@ -86,9 +84,9 @@ def main():
                         help="File with DNS traffic attributes.")
 
     args = parser.parse_args()
-    x0 = [12, 0.1, 12, 12, 0.1]
+    x0 = [30, 0.1, 50, 40, 0.1]
 
-    return train_and_estimate(18, 3, x0, args.total, args.batch, args.files)
+    return train_and_estimate(18, 5, x0, args.total, args.batch, args.files)
 
 
 if __name__ == "__main__":
