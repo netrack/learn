@@ -21,13 +21,15 @@ def train_and_estimate(dim, num_classes, units, total, batch_size, filenames):
     layer1 = int(units[0])
     layer2 = int(units[2])
     layer3 = int(units[3])
+    layer4 = int(units[4])
 
     model = keras.models.Sequential()
     model.add(keras.layers.Dense(layer1, activation="relu", input_dim=dim))
     model.add(keras.layers.Dropout(units[1]))
     model.add(keras.layers.Dense(layer2, activation="relu"))
-    model.add(keras.layers.Dense(layer3, activation="relu"))
-    model.add(keras.layers.Dropout(units[4]))
+    model.add(keras.layers.Dense(layer3, activation="tanh"))
+    # model.add(keras.layers.Dense(layer4, activation="relu"))
+    model.add(keras.layers.Dropout(units[5]))
     model.add(keras.layers.Dense(num_classes, activation="softmax"))
 
     model.compile(loss="categorical_crossentropy",
@@ -84,9 +86,9 @@ def main():
                         help="File with DNS traffic attributes.")
 
     args = parser.parse_args()
-    x0 = [30, 0.1, 50, 40, 0.1]
+    x0 = [128, 0.1, 128, 128, 128, 0.1]
 
-    return train_and_estimate(18, 5, x0, args.total, args.batch, args.files)
+    return train_and_estimate(18, 6, x0, args.total, args.batch, args.files)
 
 
 if __name__ == "__main__":
