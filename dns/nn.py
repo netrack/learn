@@ -3,9 +3,20 @@ import csv
 import contextlib
 import random
 import numpy
+import os.path
 import keras
+import scipy
 
+import matplotlib.pyplot as plt
+
+from matplotlib.lines import Line2D
+from matplotlib.ticker import NullFormatter
+from sklearn.metrics import roc_curve, auc
+from sklearn import manifold
 from keras import backend as K
+
+
+DPI = 600
 
 
 def first(tuples):
@@ -106,6 +117,9 @@ def train_and_estimate(dim, num_classes, units, total, batch_size, filenames):
         new = lambda name: stack.enter_context(open(name))
         files = [csv.reader(new(name)) for name in filenames]
 
+        # Label for each class.
+        labels = [os.path.dirname(name) for name in filenames]
+
         # Read headers of the CSV files.
         for f in files:
             next(f)
@@ -127,18 +141,83 @@ def train_and_estimate(dim, num_classes, units, total, batch_size, filenames):
 
         # Evaluate model accuracy.
         batch = []
-        for _ in range(batch_size):
+        for _ in range(batch_size*2):
             for f in files:
                 batch.append(numpy.array(next(f)))
 
         # Shuffle the training sets and then train a model.
         random.shuffle(batch)
         x_batch = last(batch)
-        y_batch = keras.utils.to_categorical(first(batch), num_classes)
+        y_true = first(batch)
 
+        y_batch = keras.utils.to_categorical(y_true, num_classes)
         loss_and_metrics = model.evaluate(x_batch, y_batch)
 
-    return loss_and_metrics[1:]
+        y_score = numpy.array(model.predict_proba(x_batch))
+        y_batch = numpy.array(y_batch)
+
+    return loss_and_metrics[1:], x_batch, y_batch, y_score, labels
+
+
+def plot(x_true, y_true, y_score, labels, num_classes, cm=plt.cm.magma):
+    tprs, aucs = [], []
+    mean_fpr = numpy.linspace(0, 1, 100)
+
+    classes = [Line2D([0], [0], color=cm(l))
+               for l in numpy.linspace(0, 1, num_classes-1)]
+
+    # A sub-plot for ROC curves.
+    _, ax = plt.subplots()
+    for i in range(num_classes-1):
+        # Calculate ROC for each class.
+        fpr, tpr, _ = roc_curve(y_true[:, i], y_score[:, i])
+        roc_auc = auc(fpr, tpr)
+
+        tprs.append(scipy.interp(mean_fpr, fpr, tpr))
+        aucs.append(roc_auc)
+
+        label = "ROC for {0} (AUC = {1:.2})".format(labels[i], roc_auc)
+        ax.plot(fpr, tpr, alpha=0.3, c=classes[i].get_color(), label=label)
+
+    # Calculate mean ROC for all classes.
+    mean_tpr = numpy.mean(tprs, axis=0)
+    mean_tpr[0], mean_tpr[-1] = 0, 1
+    mean_auc = auc(mean_fpr, mean_tpr)
+
+    # Standard deviation of mean true positives.
+    std_tpr = numpy.std(tprs, axis=0)
+    std_auc = numpy.std(aucs)
+    tprs_upper = numpy.minimum(mean_tpr + std_tpr, 1)
+    tprs_lower = numpy.maximum(mean_tpr - std_tpr, 0)
+
+    ax.plot(mean_fpr, mean_tpr, color="b", lw=2, alpha=0.8,
+            label="Mean ROC (AUC = {0:.2} $\pm$ {1:.2})".format(
+                mean_auc, std_auc))
+    ax.fill_between(mean_fpr, tprs_lower, tprs_upper,
+                    color="grey", alpha=0.2, label="$\pm$ 1 std. dev.")
+    ax.plot([0,1], [0,1], linestyle="--", lw=2, color="r",
+            alpha=0.8, label="Luck")
+
+    ax.legend(loc="lower right")
+    ax.set_xlabel("False positive rate")
+    ax.set_ylabel("True positive rate")
+    ax.figure.savefig("images/roc.png", dpi=DPI)
+
+    # Caclulate manifold embedding for the samples space using t-SNE
+    # algorithm.
+    learn = manifold.TSNE(perplexity=35)
+    color = numpy.argmax(y_true, axis=1)
+
+    x_true = learn.fit_transform(x_true)
+    noise  = numpy.random.normal(0, 3.0, x_true.shape)
+    x_true = x_true + noise
+
+    _, ax = plt.subplots()
+    ax.scatter(x_true[:,0], x_true[:,1], marker="x", cmap=cm, c=color)
+    ax.legend(classes, labels)
+    ax.xaxis.set_major_formatter(NullFormatter())
+    ax.yaxis.set_major_formatter(NullFormatter())
+    ax.figure.savefig("images/tsne.png", dpi=DPI)
 
 
 def main():
@@ -151,10 +230,21 @@ def main():
                         help="File with DNS traffic attributes.")
 
     args = parser.parse_args()
+    num_classes = 6
+
     x0 = [128, 0.1, 128, 128, 128, 0.1]
 
-    return train_and_estimate(18, 6, x0, args.total, args.batch, args.files)
+    metrics, x_true, y_true, y_score, labels = train_and_estimate(
+        18, num_classes, x0, args.total, args.batch, args.files)
+
+    print(metrics)
+    with open("metrics.txt", "w") as f:
+        f.write("accuracy = {0}\n".format(metrics[0]))
+        f.write("recall = {0}\n".format(metrics[1]))
+        f.write("precision = {0}\n".format(metrics[2]))
+
+    plot(x_true, y_true, y_score, labels, num_classes)
 
 
 if __name__ == "__main__":
-    print(main())
+    main()
