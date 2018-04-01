@@ -141,7 +141,7 @@ def train_and_estimate(dim, num_classes, units, total, batch_size, filenames):
 
         # Evaluate model accuracy.
         batch = []
-        for _ in range(batch_size*2):
+        for _ in range(batch_size*4):
             for f in files:
                 batch.append(numpy.array(next(f)))
 
@@ -165,6 +165,8 @@ def plot(x_true, y_true, y_score, labels, num_classes, cm=plt.cm.magma):
 
     classes = [Line2D([0], [0], color=cm(l))
                for l in numpy.linspace(0, 1, num_classes-1)]
+
+    orange_color = (0.9867, 0.535582, 0.38221, 1.0)
 
     # A sub-plot for ROC curves.
     _, ax = plt.subplots()
@@ -190,12 +192,12 @@ def plot(x_true, y_true, y_score, labels, num_classes, cm=plt.cm.magma):
     tprs_upper = numpy.minimum(mean_tpr + std_tpr, 1)
     tprs_lower = numpy.maximum(mean_tpr - std_tpr, 0)
 
-    ax.plot(mean_fpr, mean_tpr, color="b", lw=2, alpha=0.8,
+    ax.plot(mean_fpr, mean_tpr, color="black", lw=2, alpha=0.8,
             label="Mean ROC (AUC = {0:.2} $\pm$ {1:.2})".format(
                 mean_auc, std_auc))
     ax.fill_between(mean_fpr, tprs_lower, tprs_upper,
                     color="grey", alpha=0.2, label="$\pm$ 1 std. dev.")
-    ax.plot([0,1], [0,1], linestyle="--", lw=2, color="r",
+    ax.plot([0,1], [0,1], linestyle="--", lw=2, color=orange_color,
             alpha=0.8, label="Luck")
 
     ax.legend(loc="lower right")
