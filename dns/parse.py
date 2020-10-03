@@ -19,8 +19,10 @@ def shannon(b):
 
 def writeto(writer, label):
     csvwriter = csv.writer(writer)
+
     csvwriter.writerow([
         "label",
+        "qname",
         "qdcount",
         "ancount",
         "arcount",
@@ -43,14 +45,16 @@ def writeto(writer, label):
 
     def _prn(pkt):
         row = dnsonly(pkt)
-        csvwriter.writerow([label]+list(map(float, row)))
+        csvwriter.writerow([label]+list(row))
 
     return _prn
+
 
 def dnsonly(pkt):
     dns = pkt.lastlayer()
     attrs = []
 
+    attrs.append(dns.qd.qname.decode("utf-8", errors="replace"))
     # Number of questions.
     attrs.append(dns.qdcount)
     # Number of answers.
@@ -122,7 +126,6 @@ def main():
 
     args = parser.parse_args()
 
-    # with open(args.out, "w", newline="") as csvfile:
     with open(args.out, "w") as csvfile:
         scapy.sendrecv.sniff(
             offline=args.pcap,

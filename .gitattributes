@@ -1,4 +1,2 @@
 *.pcap filter=lfs diff=lfs merge=lfs -text
-dns2tcp/dns2tcp/2018-03-23-11-08-11.pcap filter=lfs diff=lfs merge=lfs -text
-dnscapy/2018-03-29-19-06-25.pcap filter=lfs diff=lfs merge=lfs -text
-dns/tuns/2018-03-30-09-40-10.pcap filter=lfs diff=lfs merge=lfs -text
+*.csv filter=lfs diff=lfs merge=lfs -text
