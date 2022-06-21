@@ -7,7 +7,7 @@ html5lib==0.9999999
 Keras==2.1.5
 keras_metrics==1.0.0
 Markdown==2.6.11
-numpy==1.14.2
+numpy==1.22.0
 protobuf==3.5.2.post1
 pyyaml>=4.2b1
 scapy>=2.4.1
